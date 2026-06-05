@@ -7,7 +7,10 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 public class VestibularWebhookApplication {
 
 	public static void main(String[] args) {
-		SpringApplication.run(VestibularWebhookApplication.class, args);
-	}
 
+		SpringApplication.run(
+				VestibularWebhookApplication.class,
+				args
+		);
+	}
 }
