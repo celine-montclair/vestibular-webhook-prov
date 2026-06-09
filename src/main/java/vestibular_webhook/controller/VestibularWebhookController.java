@@ -22,22 +22,22 @@ public class VestibularWebhookController {
 
     @PostMapping("/vestibular")
     public ResponseEntity<?> receberWebhook(
-
-            @RequestHeader(value = "Authorization", required = false)
-            String authorization,
-
+            @RequestHeader(value = "Authorization", required = false) String authorization,
             @RequestBody VestibularWebhookRequest request
     ) {
 
-        if (authorization == null ||
-                !authorization.equals("Bearer " + webhookToken)) {
+        String expectedAuthorization = "Bearer " + webhookToken.trim();
+        String receivedAuthorization = authorization == null ? null : authorization.trim();
 
+        System.out.println("AUTH RECEBIDO: [" + receivedAuthorization + "]");
+        System.out.println("AUTH ESPERADO: [" + expectedAuthorization + "]");
+
+        if (receivedAuthorization == null || !receivedAuthorization.equals(expectedAuthorization)) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
                     .body(Map.of("error", "Token inválido"));
         }
 
         try {
-
             vestibularWebhookService.updateStatusandScore(request);
 
             return ResponseEntity.ok(
@@ -45,7 +45,6 @@ public class VestibularWebhookController {
             );
 
         } catch (RuntimeException e) {
-
             return ResponseEntity.badRequest()
                     .body(Map.of("error", e.getMessage()));
         }
