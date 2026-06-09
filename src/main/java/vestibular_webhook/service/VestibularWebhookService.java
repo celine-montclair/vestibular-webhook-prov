@@ -1,6 +1,7 @@
 package vestibular_webhook.service;
 
 import lombok.RequiredArgsConstructor;
+import org.springframework.dao.EmptyResultDataAccessException;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 import vestibular_webhook.dto.VestibularWebhookRequest;
@@ -24,7 +25,8 @@ public class VestibularWebhookService {
                 SELECT
                     SPI.IDPS,
                     SPI.CODUSUARIOPS,
-                    SPI.NUMEROINSCRICAO
+                    SPI.NUMEROINSCRICAO,
+                    SPI.STATUS
                 FROM SPSOPCAOINSCRITO SPI
                 JOIN SPSPROCESSOSELETIVO SPS
                     ON SPS.IDPS = SPI.IDPS
@@ -32,25 +34,35 @@ public class VestibularWebhookService {
                     ON SPU.CODUSUARIOPS = SPI.CODUSUARIOPS
                 WHERE SPU.CPF = ?
                   AND SPI.IDPS = ?
-                  AND SPI.STATUS = 0
                 """;
 
-        Map<String, Object> candidato = jdbcTemplate.queryForMap(
-                buscaSql,
-                request.getCpf(),
-                request.getIdps()
-        );
+        Map<String, Object> candidato;
+
+        try {
+            candidato = jdbcTemplate.queryForMap(
+                    buscaSql,
+                    request.getCpf(),
+                    request.getIdps()
+            );
+        } catch (EmptyResultDataAccessException e) {
+            throw new RuntimeException("Nenhum candidato encontrado para o CPF e IDPS informados.");
+        }
 
         Integer idps = ((Number) candidato.get("IDPS")).intValue();
-
         Integer codUsuarioPs = ((Number) candidato.get("CODUSUARIOPS")).intValue();
-
         Integer numeroInscricao = ((Number) candidato.get("NUMEROINSCRICAO")).intValue();
+        Integer statusAtual = ((Number) candidato.get("STATUS")).intValue();
 
         System.out.println("Candidato encontrado:");
         System.out.println("IDPS: " + idps);
         System.out.println("CODUSUARIOPS: " + codUsuarioPs);
         System.out.println("NUMEROINSCRICAO: " + numeroInscricao);
+        System.out.println("STATUS ATUAL: " + statusAtual);
+
+        if (statusAtual == 5) {
+            System.out.println("Candidato já está aprovado. Nenhum update necessário.");
+            return;
+        }
 
         String updateSql = """
                 UPDATE SPSOPCAOINSCRITO
@@ -73,9 +85,6 @@ public class VestibularWebhookService {
                 codUsuarioPs
         );
 
-        System.out.println(
-                "UPDATE realizado com sucesso. Linhas afetadas: "
-                        + linhasAfetadas
-        );
+        System.out.println("UPDATE realizado com sucesso. Linhas afetadas: " + linhasAfetadas);
     }
 }
